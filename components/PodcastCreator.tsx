@@ -42,7 +42,6 @@ function PodcastCreator() {
   };
 
   const handleFormSubmit = async (formData: FormData) => {
-    
     if (!imgCover) {
       fileWrapper.current.focus();
       toast({
@@ -51,7 +50,7 @@ function PodcastCreator() {
       });
       return;
     }
-    
+
     const res = await savePodcast(formData);
     // if (res.ok) {
     //   toast({
@@ -65,7 +64,7 @@ function PodcastCreator() {
   return (
     <div className="mt-3">
       <form action={handleFormSubmit} ref={formRef}>
-        <div className="grid w-full max-w-sm items-center gap-1.5 mt-3">
+        <div className="grid w-full max-w-md items-center gap-1.5 mt-3">
           <Label htmlFor="title">
             Podcast Name <Required>*</Required>
           </Label>
@@ -78,45 +77,45 @@ function PodcastCreator() {
           />
         </div>
 
-        <div className="grid w-full max-w-sm items-center gap-1.5 mt-3">
+        <div className="grid w-full max-w-md items-center gap-1.5 mt-3">
           <Label htmlFor="coverImg">
             Artwork <Required>*</Required>
           </Label>
-          <div className="grid w-full items-center gap-1.5">
-            <div className="max-w-sm mx-auto  overflow-hidden items-center">
-              <div
-                tabIndex={-1}
-                ref={fileWrapper}
-                className=" focus:border-red-400 max-w-sm p-6 mb-4 bg-slate-100 border-dashed border-2 border-slate-400 rounded-lg items-center mx-auto text-center cursor-pointer"
-              >
-                <input
-                  name="artwork"
-                  id="coverImg"
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleImgChange}
-                  // required
-                />
-                <label htmlFor="coverImg" className="cursor-pointer">
-                  {imgCover ? (
-                    <div className="max-w-sm p-6 mb-4 mx-auto text-center border border-slate-300">
-                      <img
-                        className="max-h-48 rounded-lg mx-auto"
-                        src={URL.createObjectURL(imgCover)}
-                        // width={192}
-                        // height={192}
-                        alt="Artwork Preview"
-                      />
-                    </div>
-                  ) : (
+          <div className="max-w-md overflow-hidden items-center">
+            <div
+              tabIndex={-1}
+              ref={fileWrapper}
+              className=" focus:border-red-400 max-w-md p-6 mb-4 bg-slate-100 border-dashed border-2 border-slate-400 rounded-lg items-center mx-auto text-center cursor-pointer"
+            >
+              <input
+                name="artwork"
+                id="coverImg"
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={handleImgChange}
+                // required
+              />
+              <label htmlFor="coverImg" className="cursor-pointer">
+                {imgCover ? (
+                  <div className="max-w-md p-6 mb-4 mx-auto text-center border border-slate-300">
+                    <img
+                      className="max-h-48 rounded-lg mx-auto"
+                      src={URL.createObjectURL(imgCover)}
+                      // width={192}
+                      // height={192}
+                      alt="Artwork Preview"
+                    />
+                  </div>
+                ) : (
+                  <div className="max-w-md p-6 mb-4">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"
                       strokeWidth="1.5"
                       stroke="currentColor"
-                      className="w-8 h-8 text-slate-700 mx-auto mb-4"
+                      className="w-8 h-8 text-slate-700 mx-auto"
                     >
                       <path
                         strokeLinecap="round"
@@ -124,32 +123,32 @@ function PodcastCreator() {
                         d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
                       />
                     </svg>
-                  )}
+                  </div>
+                )}
 
-                  <h5 className="mb-2 text-xl font-bold tracking-tight text-slate-700">
-                    Upload picture
-                  </h5>
-                  <p className="font-normal text-sm text-slate-400 md:px-6">
-                    Choose photo size should be less than{" "}
-                    <b className="text-slate-600">2mb</b>
-                  </p>
-                  <p className="font-normal text-sm text-slate-400 md:px-6">
-                    and should be in{" "}
-                    <b className="text-slate-600">JPG, PNG, or GIF</b> format.
-                  </p>
-                  <span
-                    id="filename"
-                    className="text-slate-500 bg-slate-200 z-50"
-                  >
-                    {imgCover ? imgCover.name : "No File Chosen"}
-                  </span>
-                </label>
-              </div>
+                <h5 className="mb-2 text-xl font-bold tracking-tight text-slate-700">
+                  {imgCover ? "Change" : "Upload"} Artwork
+                </h5>
+                <p className="font-normal text-sm text-slate-400 md:px-6">
+                  Choosen image size should be less than{" "}
+                  <b className="text-slate-600">3mbs</b>
+                </p>
+                <p className="font-normal text-sm text-slate-400 md:px-6">
+                  and should be in{" "}
+                  <b className="text-slate-600">JPG, PNG, or GIF</b> format.
+                </p>
+                <span
+                  id="filename"
+                  className="text-slate-500 bg-slate-200 z-50"
+                >
+                  {imgCover ? imgCover.name : "No File Chosen"}
+                </span>
+              </label>
             </div>
           </div>
         </div>
 
-        <div className="grid w-full gap-1.5">
+        <div className="grid max-w-md w-full gap-1.5">
           <Label htmlFor="description">Description </Label>
           <Textarea
             name="description"

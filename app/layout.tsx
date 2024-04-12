@@ -11,7 +11,8 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Podcaster",
-  description: "A onestop place for all your podcasts, whether you are creator or a listener. we have the biggest catalogue of podcasts.",
+  description:
+    "A onestop place for all your podcasts, whether you are creator or a listener. we have the biggest catalogue of podcasts.",
 };
 
 export default function RootLayout({
@@ -28,24 +29,29 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="fixed flex flex-row justify-center items-center px-6 bg-background dark:bg-slate-900 shadow dark:shadow-slate-300 h-24 lg:h-16 z-30 top-0 left-0 right-0">
-            <div className="flex flex-col gap-2 lg:flex-row items-center justify-between max-w-6xl w-full">
-              <div className="flex flex-row justify-center gap-6 items-center">
-                <Link href="/" className="flex flex-row space-x-3 items-center">
-                  <Image
-                    src="/logo.svg"
-                    alt="Podcast Logo"
-                    width={24}
-                    height={24}
-                  />
-                  <p className="text-xl font-medium font-matter">Podcaster</p>
-                </Link>               
-              </div>
-              <div className="flex flex-row justify-center gap-3">
-                <ThemeToggle />
+          <header>
+            <div className="fixed flex flex-row justify-center items-center px-6 bg-background dark:bg-slate-900 shadow dark:shadow-slate-300 h-20 lg:h-16 z-30 top-0 left-0 right-0">
+              <div className="flex lg:flex-row items-center justify-between max-w-7xl w-full">
+                <div className="flex flex-row justify-center gap-6 items-center">
+                  <Link
+                    href="/"
+                    className="flex flex-row space-x-3 items-center"
+                  >
+                    <Image
+                      src="/logo.svg"
+                      alt="Podcast Logo"
+                      width={24}
+                      height={24}
+                    />
+                    <p className="text-xl font-medium font-matter">Podcaster</p>
+                  </Link>
+                </div>
+                <div className="flex flex-row justify-center gap-3">
+                  <ThemeToggle />
+                </div>
               </div>
             </div>
-          </div>
+          </header>
           {children}
 
           <Toaster />
