@@ -10,6 +10,9 @@ import { SubmitButton } from "./SubmitButton";
 import { Textarea } from "./ui/textarea";
 import { Required } from "./ui/required";
 import { savePodcast } from "@/actions/podcastAction";
+import CategorySelect from "./CategorySelect";
+
+import Categories from "@/data/categories";
 
 function PodcastCreator() {
   const formRef = useRef<HTMLFormElement>(null);
@@ -52,19 +55,20 @@ function PodcastCreator() {
     }
 
     const res = await savePodcast(formData);
-    // if (res.ok) {
-    //   toast({
-    //     title: "Success",
-    //     description: "Podcast created successfully!",
-    //   });
-    //   formRef.current?.reset();
-    //   setImgCover(null);
-    // }
+    if (res?.error) {
+      toast({
+        title: "Error",
+        description: "Failed to Save Podcast!",
+      });
+    } else {
+      formRef.current?.reset();
+      setImgCover(null);
+    }
   };
   return (
     <div className="mt-3">
       <form action={handleFormSubmit} ref={formRef}>
-        <div className="grid w-full max-w-md items-center gap-1.5 mt-3">
+        <div className="grid w-full max-w-md items-center gap-2.5 mt-3">
           <Label htmlFor="title">
             Podcast Name <Required>*</Required>
           </Label>
@@ -77,7 +81,7 @@ function PodcastCreator() {
           />
         </div>
 
-        <div className="grid w-full max-w-md items-center gap-1.5 mt-3">
+        <div className="grid w-full max-w-md items-center gap-2.5 mt-3">
           <Label htmlFor="coverImg">
             Artwork <Required>*</Required>
           </Label>
@@ -148,7 +152,14 @@ function PodcastCreator() {
           </div>
         </div>
 
-        <div className="grid max-w-md w-full gap-1.5">
+        <div className="grid max-w-md w-full gap-2.5 mt-3">
+          <Label htmlFor="category">
+            Category <Required>*</Required>{" "}
+          </Label>
+          <CategorySelect name="category" options={Categories} isRequired={true} />
+        </div>
+
+        <div className="grid max-w-md w-full gap-2.5 mt-3">
           <Label htmlFor="description">Description </Label>
           <Textarea
             name="description"
