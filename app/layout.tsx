@@ -8,11 +8,15 @@ import Image from "next/image";
 import { Toaster } from "@/components/ui/toaster";
 import connectDB from "@/lib/db";
 import { cn } from "@/lib/utils";
+import Navbar from "@/components/Navbar";
 
 connectDB();
 
 const inter = Inter({ subsets: ["latin"] });
-const chivo_mono = Chivo_Mono({ weight: ['400', '700', '900' ], subsets: ["latin"] });
+const chivo_mono = Chivo_Mono({
+  weight: ["400", "700", "900"],
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: "Podcasty",
@@ -47,9 +51,20 @@ export default function RootLayout({
                       alt="Podcast Logo"
                       width={24}
                       height={24}
+                      className="rounded-md h-6 w-auto"
                     />
-                    <p className={cn("text-2xl font-bold font-matter", chivo_mono.className)}>Podcasty</p>
+                    <p
+                      className={cn(
+                        "text-2xl font-bold font-matter",
+                        chivo_mono.className
+                      )}
+                    >
+                      Podcasty
+                    </p>
                   </Link>
+                </div>
+                <div className="flex flex-row">
+                  <Navbar />
                 </div>
                 <div className="flex flex-row justify-center gap-3">
                   <ThemeToggle />
@@ -57,7 +72,12 @@ export default function RootLayout({
               </div>
             </div>
           </header>
-          {children}
+          <main className="px-4">
+            <div className="mx-auto max-w-7xl pt-24 pb-6 sm:px-6 lg:px-8">
+              <h1 className="text-3xl font-bold mb-8">Welcome to Podcasty</h1>
+              {children}
+            </div>
+          </main>
 
           <Toaster />
         </ThemeProvider>

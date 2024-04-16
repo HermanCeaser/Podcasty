@@ -147,7 +147,7 @@ export const savePodcast = async (formData: FormData) => {
     });
 
     // delay for 2 seconds and delete from tmpdir
-    await delay(2000);
+    // await delay(2000);
     console.log("Deleting from tmp dir");
     // delete from tmp dir
     await fs.unlink(filepath.filepath);

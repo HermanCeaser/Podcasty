@@ -22,7 +22,6 @@ const Categories: Category[] = [
   { id: 14, name: "Society & Culture" },
   { id: 15, name: "Literature" },
   { id: 16, name: "Religion & Spirituality" },
-  { id: 17, name: "Technology" },
   { id: 18, name: "Politics" },
   { id: 19, name: "Film" },
   { id: 20, name: "Environment" },

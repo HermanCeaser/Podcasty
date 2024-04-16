@@ -1,25 +1,52 @@
+/* eslint-disable react/jsx-key */
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useRef, useState } from "react";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { useToast } from "./ui/use-toast";
-import Image from "next/image";
-import { SubmitButton } from "./SubmitButton";
-import { Textarea } from "./ui/textarea";
-import { Required } from "./ui/required";
-import { savePodcast } from "@/actions/podcastAction";
-import CategorySelect from "./CategorySelect";
 
-import Categories from "@/data/categories";
+import { useToast } from "./ui/use-toast";
+import { SubmitButton } from "./SubmitButton";
+
+import { savePodcast } from "@/actions/podcastAction";
+
+import useMultistepForm from "@/hooks/useMultistepForm";
+import PodcastReleaseForm from "./forms/PodcastReleaseForm";
+import EpisodeListingForm from "./forms/EpisodeListingForm";
+import { Button } from "./ui/button";
+import { set } from "mongoose";
+
+type Data = {
+  title: string;
+  artwork: File | null;
+  description: string;
+  category: string;
+  artist?: string;
+  episodes?: {
+    title: string;
+    description: string;
+    duration: string;
+    audio: File | null;
+  }[];
+};
+
+const INITIAL_FORM_DATA = {
+  title: "",
+  artwork: null,
+  description: "",
+  category: "",
+  artist: "",
+};
 
 function PodcastCreator() {
   const formRef = useRef<HTMLFormElement>(null);
   const fileWrapper = useRef<HTMLDivElement>(null!);
-  const [imgCover, setImgCover] = useState<File | null>(null);
+  const [data, setFormData] = useState<Data>(INITIAL_FORM_DATA);
 
-  const { toast } = useToast();
+  const updateFields = (fields: Partial<Data>) => {
+    setFormData((prev) => {
+      return { ...prev, ...fields };
+    });
+  };
 
   const handleImgChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -41,154 +68,67 @@ function PodcastCreator() {
       return;
     }
 
-    setImgCover(img);
+    updateFields({artwork: img});
   };
+
+  const { steps, currentStepIndex, isFirstStep, isLastStep, back, next, step } =
+    useMultistepForm([
+      <PodcastReleaseForm
+        {...data}
+        onChange={handleImgChange}
+        fileRef={fileWrapper}
+        updateFields={updateFields}
+      />,
+      <EpisodeListingForm />,
+    ]);
+
+  const { toast } = useToast();
 
   const handleFormSubmit = async (formData: FormData) => {
-    if (!imgCover) {
-      fileWrapper.current.focus();
-      toast({
-        title: "Error",
-        description: "The artwork for the podcast is required!",
-      });
-      return;
+    if (isFirstStep) {
+      if (!data.artwork) {
+        fileWrapper.current.focus();
+        toast({
+          title: "Error",
+          description: "The artwork for the podcast is required!",
+        });
+        return;
+      }
     }
+
+    if (!isLastStep) return next();
+
+    return console.log(formData);
 
     const res = await savePodcast(formData);
-    if (res?.error) {
-      toast({
-        title: "Error",
-        description: "Failed to Save Podcast!",
-      });
-    } else {
-      formRef.current?.reset();
-      setImgCover(null);
-    }
+    // if (res?.error) {
+    //   toast({
+    //     title: "Error",
+    //     description: "Failed to Save Podcast!",
+    //   });
+    // } else {
+    //   formRef.current?.reset();
+    //   setImgCover(null);
+    // }
   };
   return (
-    <div className="mt-3">
+    <div className="mt-3 relative">
       <form action={handleFormSubmit} ref={formRef}>
-        <div className="grid w-full max-w-md items-center gap-2.5 mt-3">
-          <Label htmlFor="title">
-            Podcast Name <Required>*</Required>
-          </Label>
-          <Input
-            id="title"
-            type="text"
-            placeholder="Podcast Title"
-            name="title"
-            required
-          />
+        <div className="absolute top-0.5 right-1">
+          {currentStepIndex + 1} / {steps.length}
         </div>
-
-        <div className="grid w-full max-w-md items-center gap-2.5 mt-3">
-          <Label htmlFor="coverImg">
-            Artwork <Required>*</Required>
-          </Label>
-          <div className="max-w-md overflow-hidden items-center">
-            <div
-              tabIndex={-1}
-              ref={fileWrapper}
-              className=" focus:border-red-400 max-w-md p-6 mb-4 bg-slate-100 border-dashed border-2 border-slate-400 rounded-lg items-center mx-auto text-center cursor-pointer"
-            >
-              <input
-                name="artwork"
-                id="coverImg"
-                type="file"
-                className="hidden"
-                accept="image/*"
-                onChange={handleImgChange}
-                // required
-              />
-              <label htmlFor="coverImg" className="cursor-pointer">
-                {imgCover ? (
-                  <div className="max-w-md p-6 mb-4 mx-auto text-center border border-slate-300">
-                    <img
-                      className="max-h-48 rounded-lg mx-auto"
-                      src={URL.createObjectURL(imgCover)}
-                      // width={192}
-                      // height={192}
-                      alt="Artwork Preview"
-                    />
-                  </div>
-                ) : (
-                  <div className="max-w-md p-6 mb-4">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth="1.5"
-                      stroke="currentColor"
-                      className="w-8 h-8 text-slate-700 mx-auto"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
-                      />
-                    </svg>
-                  </div>
-                )}
-
-                <h5 className="mb-2 text-xl font-bold tracking-tight text-slate-700">
-                  {imgCover ? "Change" : "Upload"} Artwork
-                </h5>
-                <p className="font-normal text-sm text-slate-400 md:px-6">
-                  Choosen image size should be less than{" "}
-                  <b className="text-slate-600">3mbs</b>
-                </p>
-                <p className="font-normal text-sm text-slate-400 md:px-6">
-                  and should be in{" "}
-                  <b className="text-slate-600">JPG, PNG, or GIF</b> format.
-                </p>
-                <span
-                  id="filename"
-                  className="text-slate-500 bg-slate-200 z-50"
-                >
-                  {imgCover ? imgCover.name : "No File Chosen"}
-                </span>
-              </label>
-            </div>
-          </div>
+        {step}
+        <div className="flex gap-1 justify-between mt-4">
+          {!isFirstStep && (
+            <Button type="button" onClick={back}>
+              Back
+            </Button>
+          )}
+          <SubmitButton isLastStep={isLastStep} />
         </div>
-
-        <div className="grid max-w-md w-full gap-2.5 mt-3">
-          <Label htmlFor="category">
-            Category <Required>*</Required>{" "}
-          </Label>
-          <CategorySelect name="category" options={Categories} isRequired={true} />
-        </div>
-
-        <div className="grid max-w-md w-full gap-2.5 mt-3">
-          <Label htmlFor="description">Description </Label>
-          <Textarea
-            name="description"
-            placeholder="Type your message here."
-            id="description"
-          />
-        </div>
-
-        <SubmitButton />
       </form>
     </div>
   );
 }
 
 export default PodcastCreator;
-
-{
-  /* Preview Image  */
-}
-{
-  /* {imgCover && (
-  <div className="max-w-sm p-6 mb-4 mx-auto text-center border border-slate-300">
-    <img
-      className="max-h-48 rounded-lg mx-auto"
-      src={URL.createObjectURL(imgCover)}
-      // width={192}
-      // height={192}
-      alt="Artwork Preview"
-    />
-  </div>
-)} */
-}

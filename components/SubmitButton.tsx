@@ -3,7 +3,11 @@
 import { useFormStatus } from "react-dom";
 import { Button } from "./ui/button";
 
-export function SubmitButton() {
+type SubmitProps = {
+    isLastStep: boolean
+}
+
+export function SubmitButton({isLastStep}: SubmitProps) {
   const { pending } = useFormStatus();
 
   return (
@@ -12,7 +16,7 @@ export function SubmitButton() {
         type="submit"
         disabled={pending}
       >
-        {pending ? "saving..." : "Save"}
+        {pending ? "saving..." : isLastStep ? "Finish": "Next"}
       </Button>
     </div>
   );
