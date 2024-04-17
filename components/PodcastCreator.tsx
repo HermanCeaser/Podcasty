@@ -11,7 +11,7 @@ import { savePodcast } from "@/actions/podcastAction";
 
 import useMultistepForm from "@/hooks/useMultistepForm";
 import PodcastReleaseForm from "./forms/PodcastReleaseForm";
-import EpisodeListingForm from "./forms/EpisodeListingForm";
+import EpisodeForm from "./forms/EpisodeForm";
 import { Button } from "./ui/button";
 import { set } from "mongoose";
 
@@ -79,7 +79,7 @@ function PodcastCreator() {
         fileRef={fileWrapper}
         updateFields={updateFields}
       />,
-      <EpisodeListingForm />,
+      <EpisodeForm />,
     ]);
 
   const { toast } = useToast();
