@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { FileRejection, useDropzone } from "react-dropzone";
 
 import { Label } from "../ui/label";
@@ -11,6 +11,7 @@ import {
   DeleteIcon,
   EditIcon,
   MoreHorizontal,
+  PauseCircle,
   PlayCircle,
   Trash2Icon,
 } from "lucide-react";
@@ -38,9 +39,15 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
+import { set } from "mongoose";
+import { formatDuration } from "@/lib/utils";
 
+let a: HTMLAudioElement|null;
 const EpisodeForm = () => {
   const [episodes, setEpisodes] = useState<File[]>([]);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playingEpisode, setPlayingEpisode] = useState<string | null>(null);
+  const [currentPlayingIndex, setCurrentPlayingIndex] = useState<number|null>(null);
 
   const onDrop = useCallback(
     (acceptedFiles: File[], _fileRejections: FileRejection[]) => {
@@ -50,11 +57,12 @@ const EpisodeForm = () => {
             // Check if the file already exists in episodes
             return !prevEpisodes.some((episode) => episode.name === file.name);
           });
+          // console.log(newEpisodes);
           return [...prevEpisodes, ...newEpisodes];
         });
       }
       // Do something with the files
-      console.log(acceptedFiles);
+      // console.log(acceptedFiles);
     },
     []
   );
@@ -66,7 +74,43 @@ const EpisodeForm = () => {
     maxFiles: 10,
     maxSize: 1024 * 10000, //10 mbs
     onDrop,
-  });
+  })
+
+  useEffect(() => {
+    if (a) {
+      a.pause();
+      a = null;
+      setIsPlaying(false);
+    }
+    if (playingEpisode) {
+      a = new Audio(playingEpisode);
+      a.addEventListener("loadedmetadata", () => {
+        const duration = a?.duration;
+        if(duration) console.log(formatDuration(duration));
+      })
+      a.play();
+      setIsPlaying(true);
+      a.onended = () => {
+        setIsPlaying(false);
+      };
+    }
+  }, [playingEpisode]);
+
+  const handlePlay = (src: string, currentEpisode:number) => {
+    if (src) {
+      setPlayingEpisode(src);
+      setCurrentPlayingIndex(currentEpisode);
+      setIsPlaying(false);
+    }
+  };
+
+  const handlePause = () => {
+    if (playingEpisode) {
+     setPlayingEpisode(null);
+     setCurrentPlayingIndex(null);
+     a?.pause();
+    }
+  }
 
   return (
     <div>
@@ -190,7 +234,31 @@ const EpisodeForm = () => {
                             {idx + 1}
                           </TableCell>
                           <TableCell className="font-medium">
-                            <PlayCircle className="h-8 w-8"/>
+                            {isPlaying && currentPlayingIndex === idx ? (
+                              <Button variant="ghost" onClick={handlePause}>
+                                <PauseCircle
+                                  fill="#ec48d1"
+                                  stroke="#f0f7ff"
+                                  className="h-10 w-10"
+                                  strokeWidth={1}
+                                />
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                onClick={() => {
+                                  // setIsPlaying(true);
+                                  handlePlay(URL.createObjectURL(episode), idx);
+                                }}
+                              >
+                                <PlayCircle
+                                  fill="#ec48d1"
+                                  stroke="#f0f7ff"
+                                  className="h-10 w-10"
+                                  strokeWidth={1}
+                                />
+                              </Button>
+                            )}
                           </TableCell>
                           <TableCell>{episode.name}</TableCell>
                           <TableCell>

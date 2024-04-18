@@ -13,8 +13,8 @@
     --card: 247 47.4% 57.19% 
     --card-foreground: 227.06deg 57.19% 10%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 200 10% 100%;
+    --popover-foreground:227.06deg 57.19% 10%;
 
     --primary: 222.2 47.4% 11.2%;
     --primary-foreground: 210 40% 98%;
@@ -45,7 +45,7 @@
     --card: 247.06deg 57.19% 10%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 247.06deg 57.19% 10%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 310 81.2% 60.4%;
@@ -68,7 +68,12 @@
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
   }
+
+  
+
 }
+
+
 
 @layer base {
   * {

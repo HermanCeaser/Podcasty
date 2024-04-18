@@ -98,7 +98,7 @@ function PodcastCreator() {
 
     if (!isLastStep) return next();
 
-    return console.log(formData);
+    return;
 
     const res = await savePodcast(formData);
     // if (res?.error) {
