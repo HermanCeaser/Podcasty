@@ -42,29 +42,55 @@ import {
 import { set } from "mongoose";
 import { formatDuration } from "@/lib/utils";
 
-let a: HTMLAudioElement|null;
+type UploadedEpisode = {
+  episodeBlob: File;
+  duration: number;
+  description?: string;
+  title?: string;
+};
+
+let a: HTMLAudioElement | null;
 const EpisodeForm = () => {
-  const [episodes, setEpisodes] = useState<File[]>([]);
+  const [episodes, setEpisodes] = useState<UploadedEpisode[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playingEpisode, setPlayingEpisode] = useState<string | null>(null);
-  const [currentPlayingIndex, setCurrentPlayingIndex] = useState<number|null>(null);
+  const [currentPlayingIndex, setCurrentPlayingIndex] = useState<number | null>(
+    null
+  );
 
   const onDrop = useCallback(
-    (acceptedFiles: File[], _fileRejections: FileRejection[]) => {
+    async (acceptedFiles: File[], _fileRejections: FileRejection[]) => {
       if (acceptedFiles?.length) {
+        // Check if the file already exists in episodes
+        const newEpisodes = acceptedFiles.filter((file) => {
+          return !episodes.some(
+            (episode) => file.name === episode.episodeBlob.name
+          );
+        });
+
+        const uploadedEpisodesWithDurations = await Promise.all(
+          newEpisodes.map(async (file) => {
+            const audio = new Audio(URL.createObjectURL(file));
+            await new Promise<void>((resolve) => {
+              audio.addEventListener("loadedmetadata", () => {
+                resolve();
+              });
+            });
+            const duration = audio.duration;
+            audio.remove();
+            return { episodeBlob: file, duration };
+          })
+        );
+
+        // Add the new files to the episodes array
         setEpisodes((prevEpisodes) => {
-          const newEpisodes = acceptedFiles.filter((file) => {
-            // Check if the file already exists in episodes
-            return !prevEpisodes.some((episode) => episode.name === file.name);
-          });
-          // console.log(newEpisodes);
-          return [...prevEpisodes, ...newEpisodes];
+          return [...prevEpisodes, ...uploadedEpisodesWithDurations];
         });
       }
       // Do something with the files
       // console.log(acceptedFiles);
     },
-    []
+    [episodes]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -74,7 +100,7 @@ const EpisodeForm = () => {
     maxFiles: 10,
     maxSize: 1024 * 10000, //10 mbs
     onDrop,
-  })
+  });
 
   useEffect(() => {
     if (a) {
@@ -84,10 +110,6 @@ const EpisodeForm = () => {
     }
     if (playingEpisode) {
       a = new Audio(playingEpisode);
-      a.addEventListener("loadedmetadata", () => {
-        const duration = a?.duration;
-        if(duration) console.log(formatDuration(duration));
-      })
       a.play();
       setIsPlaying(true);
       a.onended = () => {
@@ -96,7 +118,7 @@ const EpisodeForm = () => {
     }
   }, [playingEpisode]);
 
-  const handlePlay = (src: string, currentEpisode:number) => {
+  const handlePlay = (src: string, currentEpisode: number) => {
     if (src) {
       setPlayingEpisode(src);
       setCurrentPlayingIndex(currentEpisode);
@@ -106,11 +128,16 @@ const EpisodeForm = () => {
 
   const handlePause = () => {
     if (playingEpisode) {
-     setPlayingEpisode(null);
-     setCurrentPlayingIndex(null);
-     a?.pause();
+      setPlayingEpisode(null);
+      setCurrentPlayingIndex(null);
+      a?.pause();
     }
-  }
+  };
+
+  // calculate the totalDuration of the episodes
+  const totalDuration: number = episodes.reduce((total, episode) => {
+    return total + Number(episode?.duration);
+  }, 0);
 
   return (
     <div>
@@ -205,21 +232,11 @@ const EpisodeForm = () => {
               {/* <!-- Show when Episodes are added --> */}
               {episodes && episodes.length > 0 && (
                 <Table>
-                  <TableCaption>
-                    <dl className="grid gap-2">
-                      <div className="flex items-center justify-center gap-2">
-                        <dt>{episodes.length} Tracks</dt>
-                        <dd className="flex items-center gap-1 text-muted-foreground">
-                          <Clock3 className="h-4 w-4 text-blue-700 dark:text-blue-400" />
-                          03:45
-                        </dd>
-                      </div>
-                    </dl>
-                  </TableCaption>
+                  
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[100px]">Order</TableHead>
-                      <TableHead className="w-[100px]">Play</TableHead>
+                      <TableHead className="w-[50px]">Order</TableHead>
+                      <TableHead className="w-[50px]">Play</TableHead>
                       <TableHead>Title</TableHead>
                       <TableHead>MetaData</TableHead>
                       <TableHead>Status</TableHead>
@@ -230,10 +247,10 @@ const EpisodeForm = () => {
                     {episodes.map((episode, idx) => {
                       return (
                         <TableRow key={idx}>
-                          <TableCell className="font-medium">
+                          <TableCell className="font-medium w-[50px]">
                             {idx + 1}
                           </TableCell>
-                          <TableCell className="font-medium">
+                          <TableCell className="w-[50px] p-0 font-medium">
                             {isPlaying && currentPlayingIndex === idx ? (
                               <Button variant="ghost" onClick={handlePause}>
                                 <PauseCircle
@@ -248,7 +265,10 @@ const EpisodeForm = () => {
                                 variant="ghost"
                                 onClick={() => {
                                   // setIsPlaying(true);
-                                  handlePlay(URL.createObjectURL(episode), idx);
+                                  handlePlay(
+                                    URL.createObjectURL(episode.episodeBlob),
+                                    idx
+                                  );
                                 }}
                               >
                                 <PlayCircle
@@ -260,9 +280,16 @@ const EpisodeForm = () => {
                               </Button>
                             )}
                           </TableCell>
-                          <TableCell>{episode.name}</TableCell>
+                          <TableCell>{episode.episodeBlob.name}</TableCell>
                           <TableCell>
-                            Explicit: <span className="text-sm">No</span>
+                            <div className="text-sm">
+                              <span className="text-muted-foreground">
+                                Duration:{" "}
+                              </span>
+                              {episode.duration
+                                ? formatDuration(episode.duration)
+                                : "--:--"}
+                            </div>
                           </TableCell>
                           <TableCell className="text-right">No:</TableCell>
                           <TableCell className="text-right">
@@ -290,8 +317,17 @@ const EpisodeForm = () => {
                   </TableBody>
                   <TableFooter>
                     <TableRow>
-                      <TableCell colSpan={5}>Total</TableCell>
-                      <TableCell className="text-right">$2,500.00</TableCell>
+                      <TableCell colSpan={7}>
+                        <dl className="grid gap-2">
+                          <div className="flex items-center justify-center gap-2">
+                            <dt>{episodes.length} Tracks</dt>
+                            <dd className="flex items-center gap-1 text-muted-foreground">
+                              <Clock3 className="h-4 w-4 text-blue-700 dark:text-blue-400" />
+                              {formatDuration(totalDuration)}
+                            </dd>
+                          </div>
+                        </dl>
+                      </TableCell>
                     </TableRow>
                   </TableFooter>
                 </Table>
