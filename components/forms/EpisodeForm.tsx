@@ -39,8 +39,11 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
+
+
 import { set } from "mongoose";
 import { formatDuration } from "@/lib/utils";
+import EpisodeMetadataForm from "./EpisodeMetadataForm";
 
 type UploadedEpisode = {
   episodeBlob: File;
@@ -52,11 +55,10 @@ type UploadedEpisode = {
 let a: HTMLAudioElement | null;
 const EpisodeForm = () => {
   const [episodes, setEpisodes] = useState<UploadedEpisode[]>([]);
+  const [currentOpenDialog, setCurrentOpenDialog] = useState<number|null>(null)
   const [isPlaying, setIsPlaying] = useState(false);
   const [playingEpisode, setPlayingEpisode] = useState<string | null>(null);
-  const [currentPlayingIndex, setCurrentPlayingIndex] = useState<number | null>(
-    null
-  );
+  const [currentPlayingIndex, setCurrentPlayingIndex] = useState<number|null>(null);
 
   const onDrop = useCallback(
     async (acceptedFiles: File[], _fileRejections: FileRejection[]) => {
@@ -134,10 +136,21 @@ const EpisodeForm = () => {
     }
   };
 
+  const handleEdit = (episodeIndex: number) => {
+    setCurrentOpenDialog(episodeIndex);
+    // console.log('Edit Clicked!');
+  }
+
+  const closeForm = () => {
+    setCurrentOpenDialog(null);
+  }
+
   // calculate the totalDuration of the episodes
   const totalDuration: number = episodes.reduce((total, episode) => {
     return total + Number(episode?.duration);
   }, 0);
+
+  
 
   return (
     <div>
@@ -177,27 +190,27 @@ const EpisodeForm = () => {
                     d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
                   />
                 </svg>
-                <p className="font-normal text-sm text-slate-400 md:px-6">
-                  <b className="text-primary/60">
+                <p className="font-normal text-sm md:px-6">
+                  <b className="text-primary-background/60">
                     Drag n drop some files here OR click to select files
                   </b>{" "}
                 </p>
               </div>
 
-              <h5 className="mb-2 text-xl font-bold tracking-tight text-slate-700">
+              <h5 className="mb-2 text-xl font-bold tracking-tight text-primary-background">
                 Upload Audio Files
               </h5>
-              <p className="font-normal text-sm text-slate-400 md:px-6">
+              <p className="font-normal text-sm text-primary-background md:px-6">
                 Choosen audio file size should be less than{" "}
-                <b className="text-primary/60">10 mbs</b>
+                <b className="text-primary-background/60">10 mbs</b>
               </p>
-              <p className="font-normal text-sm text-slate-400 md:px-6">
+              <p className="font-normal text-sm text-primary-background md:px-6">
                 and should be in{" "}
                 <b className="text-primary/60">mp3, aac, or wav</b> format.
               </p>
               <span
                 id="filename"
-                className="text-primary/50 bg-primary/10 z-50"
+                className="text-primary-background/50 bg-primary/10 z-50"
               >
                 {episodes && episodes.length > 0
                   ? `${episodes.length} Files Selected`
@@ -245,6 +258,18 @@ const EpisodeForm = () => {
                   </TableHeader>
                   <TableBody>
                     {episodes.map((episode, idx) => {
+                      if(currentOpenDialog !== null && currentOpenDialog === idx) {
+                        return (
+                          <TableRow key={idx}>
+                            <TableCell colSpan={7}>
+                              <EpisodeMetadataForm title={episode.episodeBlob.name.split('.')[0]} handleClose={closeForm} handleSubmit={() => {
+                                console.log('formsubmitted...');
+                                closeForm()
+                              }} />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      } else {
                       return (
                         <TableRow key={idx}>
                           <TableCell className="font-medium w-[50px]">
@@ -293,6 +318,7 @@ const EpisodeForm = () => {
                           </TableCell>
                           <TableCell className="text-right">No:</TableCell>
                           <TableCell className="text-right">
+                            
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button
@@ -306,13 +332,16 @@ const EpisodeForm = () => {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem>Edit</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleEdit(idx)}>
+                                  Edit
+                                </DropdownMenuItem>
                                 <DropdownMenuItem>Delete</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       );
+                    }
                     })}
                   </TableBody>
                   <TableFooter>

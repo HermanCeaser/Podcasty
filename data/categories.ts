@@ -2,7 +2,7 @@
 
 export type Category = {
   id: number;
-  description: string;
+  name: string;
 }
 
 const Categories: Category[] = [

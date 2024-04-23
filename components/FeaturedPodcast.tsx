@@ -6,7 +6,7 @@ function FeaturedPodcast() {
       <div className="flex flex-col justify-around">
         <h2 className="text-xl font-bold">Featured Podcast</h2>
         <div>
-          It's a show about the life of the digital nomads all over the world
+          It&apos;s a show about the life of the digital nomads all over the world
           and what they struggle with or what happens to them when they travel.
         </div>
       </div>
