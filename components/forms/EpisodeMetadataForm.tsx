@@ -9,7 +9,7 @@ const EpisodeMetadataForm = ({
   episodeIdx,
   title,
   handleClose,
-  handleSubmit,
+  updateFields,
 }: {
   episodeIdx: number;
   title: string;
@@ -27,11 +27,7 @@ const EpisodeMetadataForm = ({
       <div className="grid items-start gap-4">
         <div className="grid gap-2">
           <Label htmlFor="title">Title</Label>
-          <Input type="text" id="title" defaultValue={title} onChange={(e) => {
-            updateFields({episodes: [...episodes, episodes.map((episode, idx) => {
-              idx === episodeIdx ? {...episode, episode.title: e.target.value } : episode;
-            })]})
-          }}/>
+          <Input type="text" id="title" defaultValue={title} />
         </div>
         <div className="grid gap-2">
           <Label htmlFor="description">Description</Label>
@@ -48,13 +44,3 @@ const EpisodeMetadataForm = ({
 export default EpisodeMetadataForm;
 
 
-// const handleTitleChange = (e) => {
-//   updateFields({
-//     episodes: [...episodes, 
-//       episodes.map((episode, idx) => {
-//         idx === episodeIdx ? 
-//         {...episode, episode.title: e.target.value } : 
-//         episode;
-//   })]
-// });
-// }
