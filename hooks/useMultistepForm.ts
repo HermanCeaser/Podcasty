@@ -2,7 +2,7 @@ import { set } from 'mongoose';
 import { ReactElement, useState } from 'react'
 
 function useMultistepForm(steps: ReactElement[]) {
-  const [currentStepIndex, setCurrentStepIndex] = useState(1);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
   function next() {
     setCurrentStepIndex(i => {
