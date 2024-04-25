@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo, useCallback } from "react";
 
 import { useToast } from "./ui/use-toast";
 import { SubmitButton } from "./SubmitButton";
@@ -14,6 +14,14 @@ import PodcastReleaseForm from "./forms/PodcastReleaseForm";
 import EpisodeForm from "./forms/EpisodeForm";
 import { Button } from "./ui/button";
 import { set } from "mongoose";
+import { FileRejection, useDropzone } from "react-dropzone";
+
+export type Episode = {
+  title: string;
+  description?: string;
+  duration: number;
+  audio: File;
+};
 
 type Data = {
   title: string;
@@ -21,12 +29,7 @@ type Data = {
   description: string;
   category: string;
   artist?: string;
-  episodes?: {
-    title: string;
-    description: string;
-    duration: string;
-    audio: File | null;
-  }[];
+  episodes: Episode[];
 };
 
 const INITIAL_FORM_DATA = {
@@ -35,54 +38,93 @@ const INITIAL_FORM_DATA = {
   description: "",
   category: "",
   artist: "",
+  episodes: [],
 };
 
 function PodcastCreator() {
   const formRef = useRef<HTMLFormElement>(null);
   const fileWrapper = useRef<HTMLDivElement>(null!);
   const [data, setFormData] = useState<Data>(INITIAL_FORM_DATA);
+  const { toast } = useToast();
 
-  const updateFields = (fields: Partial<Data>) => {
+
+  const updateFields = useCallback((fields: Partial<Data>) => {
     setFormData((prev) => {
       return { ...prev, ...fields };
     });
-  };
+  }, []);
 
-  const handleImgChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) {
-      toast({
-        title: "Error",
-        description: "No file selected",
-      });
-      return;
-    }
+  const handleImgChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (!files) {
+        toast({
+          title: "Error",
+          description: "No file selected",
+        });
+        return;
+      }
 
-    // check ifaction={handle} file is an image and is less than 3 Mbs
-    const img = files[0];
-    if (!img.type.startsWith("image/") || img.size > 1024 * 3072) {
-      toast({
-        title: "Error",
-        description: "File Size is too big Or file is not an image",
-      });
-      return;
-    }
+      // check ifaction={handle} file is an image and is less than 3 Mbs
+      const img = files[0];
+      if (!img.type.startsWith("image/") || img.size > 1024 * 3072) {
+        toast({
+          title: "Error",
+          description: "File Size is too big Or file is not an image",
+        });
+        return;
+      }
 
-    updateFields({artwork: img});
-  };
+      updateFields({ artwork: img });
+    },
+    [toast, updateFields]
+  );
+
+  const onDrop = useCallback(
+    async (acceptedFiles: File[], _fileRejections: FileRejection[]) => {
+      if (acceptedFiles?.length) {
+        // Check if the file already exists in episodes
+        const newEpisodes = acceptedFiles.filter((file) => {
+          return !data.episodes.some((episode) => file.name === episode.audio.name);
+        });
+
+        const uploadedEpisodesWithDurations = await Promise.all(
+          newEpisodes.map(async (file) => {
+            const audio = new Audio(URL.createObjectURL(file));
+            await new Promise<void>((resolve) => {
+              audio.addEventListener("loadedmetadata", () => {
+                resolve();
+              });
+            });
+            const duration = audio.duration;
+            audio.remove();
+            return { audio: file, duration, title: file.name.split(".")[0] };
+          })
+        );
+
+        
+
+        (function () {
+          updateFields({
+            episodes: [...data.episodes, ...uploadedEpisodesWithDurations],
+          });
+        })();
+      }
+      // Do something with the files
+      // console.log(acceptedFiles);
+    },
+    [data.episodes, updateFields]
+  );
+
+
 
   const { steps, currentStepIndex, isFirstStep, isLastStep, back, next, step } =
-    useMultistepForm([
-      <PodcastReleaseForm
-        {...data}
-        onChange={handleImgChange}
-        fileRef={fileWrapper}
-        updateFields={updateFields}
-      />,
-      <EpisodeForm />,
-    ]);
-
-  const { toast } = useToast();
+    useMultistepForm([<PodcastReleaseForm
+      {...data}
+      onChange={handleImgChange}
+      fileRef={fileWrapper}
+      updateFields={updateFields}
+    />, <EpisodeForm episodes={data.episodes} updateFields={updateFields} onDrop={onDrop} />]);
 
   const handleFormSubmit = async (formData: FormData) => {
     if (isFirstStep) {
@@ -91,6 +133,30 @@ function PodcastCreator() {
         toast({
           title: "Error",
           description: "The artwork for the podcast is required!",
+        });
+        return;
+      }
+    }
+
+    if (currentStepIndex === 1) {
+      // If this is the second step
+      // ensure all episodes have audio, title and description
+      const episodes = data.episodes;
+      if (episodes.length === 0) {
+        toast({
+          title: "Error",
+          description: "No episodes found! ",
+        });
+        return;
+      }
+
+      const hasEmptyFields = episodes.some(
+        (episode) => !episode.audio || !episode.title 
+      );
+      if (hasEmptyFields) {
+        toast({
+          title: "Error",
+          description: "Please fill in all fields for all episodes!",
         });
         return;
       }

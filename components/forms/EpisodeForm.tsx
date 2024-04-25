@@ -1,8 +1,6 @@
-import React, { useCallback, useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { FileRejection, useDropzone } from "react-dropzone";
 
-import { Label } from "../ui/label";
-import { Required } from "../ui/required";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 
@@ -10,6 +8,7 @@ import {
   Clock3,
   DeleteIcon,
   EditIcon,
+  LucideCircleX,
   MoreHorizontal,
   PauseCircle,
   PlayCircle,
@@ -40,59 +39,38 @@ import {
   CardTitle,
 } from "../ui/card";
 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+  TooltipArrow,
+} from "../ui/tooltip";
 
-import { set } from "mongoose";
 import { formatDuration } from "@/lib/utils";
 import EpisodeMetadataForm from "./EpisodeMetadataForm";
+import { Episode } from "../PodcastCreator";
+import { Label } from "../ui/label";
+import { Textarea } from "../ui/textarea";
 
-type UploadedEpisode = {
-  episodeBlob: File;
-  duration: number;
-  description?: string;
-  title?: string;
+type EpisodeFormData = {
+  episodes: Episode[];
+};
+
+type EpisodeFormProps = EpisodeFormData & {
+  updateFields: (fields: Partial<EpisodeFormData>) => void;
+  onDrop: (acceptedFiles: File[], _fileRejections: FileRejection[]) => void;
 };
 
 let a: HTMLAudioElement | null;
-const EpisodeForm = () => {
-  const [episodes, setEpisodes] = useState<UploadedEpisode[]>([]);
-  const [currentOpenDialog, setCurrentOpenDialog] = useState<number|null>(null)
+const EpisodeForm = ({ episodes, updateFields, onDrop }: EpisodeFormProps) => {
+  const [currentOpenDialog, setCurrentOpenDialog] = useState<number | null>(
+    null
+  );
   const [isPlaying, setIsPlaying] = useState(false);
   const [playingEpisode, setPlayingEpisode] = useState<string | null>(null);
-  const [currentPlayingIndex, setCurrentPlayingIndex] = useState<number|null>(null);
-
-  const onDrop = useCallback(
-    async (acceptedFiles: File[], _fileRejections: FileRejection[]) => {
-      if (acceptedFiles?.length) {
-        // Check if the file already exists in episodes
-        const newEpisodes = acceptedFiles.filter((file) => {
-          return !episodes.some(
-            (episode) => file.name === episode.episodeBlob.name
-          );
-        });
-
-        const uploadedEpisodesWithDurations = await Promise.all(
-          newEpisodes.map(async (file) => {
-            const audio = new Audio(URL.createObjectURL(file));
-            await new Promise<void>((resolve) => {
-              audio.addEventListener("loadedmetadata", () => {
-                resolve();
-              });
-            });
-            const duration = audio.duration;
-            audio.remove();
-            return { episodeBlob: file, duration };
-          })
-        );
-
-        // Add the new files to the episodes array
-        setEpisodes((prevEpisodes) => {
-          return [...prevEpisodes, ...uploadedEpisodesWithDurations];
-        });
-      }
-      // Do something with the files
-      // console.log(acceptedFiles);
-    },
-    [episodes]
+  const [currentPlayingIndex, setCurrentPlayingIndex] = useState<number | null>(
+    null
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -139,18 +117,38 @@ const EpisodeForm = () => {
   const handleEdit = (episodeIndex: number) => {
     setCurrentOpenDialog(episodeIndex);
     // console.log('Edit Clicked!');
-  }
+  };
 
   const closeForm = () => {
     setCurrentOpenDialog(null);
-  }
+  };
+
+  const handleMetadaChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    idx: number,
+    element: keyof Episode
+  ) => {
+    const newEpisodes = episodes.map((episode, episodeIdx) => {
+      if (idx === episodeIdx) {
+        return {
+          ...episode,
+          [element]: e.target.value,
+        };
+      } else {
+        return episode;
+      }
+    });
+    updateFields({
+      episodes: newEpisodes,
+    });
+  };
 
   // calculate the totalDuration of the episodes
-  const totalDuration: number = episodes.reduce((total, episode) => {
-    return total + Number(episode?.duration);
-  }, 0);
-
-  
+  const totalDuration: number = useMemo(() => {
+    return episodes.reduce((total, episode) => {
+      return total + Number(episode?.duration);
+    }, 0);
+  }, [episodes]);
 
   return (
     <div>
@@ -171,8 +169,6 @@ const EpisodeForm = () => {
               accept="audio/*"
               multiple
               {...getInputProps()}
-              // onChange={onChange}
-              // required
             />
             <label htmlFor="coverImg" className="cursor-pointer">
               <div className="max-w-md p-6">
@@ -245,103 +241,181 @@ const EpisodeForm = () => {
               {/* <!-- Show when Episodes are added --> */}
               {episodes && episodes.length > 0 && (
                 <Table>
-                  
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[50px]">Order</TableHead>
                       <TableHead className="w-[50px]">Play</TableHead>
                       <TableHead>Title</TableHead>
-                      <TableHead>MetaData</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead colSpan={2}>MetaData</TableHead>
                       <TableHead className="text-right">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {episodes.map((episode, idx) => {
-                      if(currentOpenDialog !== null && currentOpenDialog === idx) {
+                      if (
+                        currentOpenDialog !== null &&
+                        currentOpenDialog === idx
+                      ) {
                         return (
                           <TableRow key={idx}>
                             <TableCell colSpan={7}>
-                              <EpisodeMetadataForm title={episode.episodeBlob.name.split('.')[0]} handleClose={closeForm} handleSubmit={() => {
-                                console.log('formsubmitted...');
-                                closeForm()
-                              }} />
+                              <div>
+                                <div className="flex justify-between">
+                                  <h5>Metadata Editing</h5>
+                                  <Button
+                                    className="rounded-full"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={closeForm}
+                                    title="Close"
+                                  >
+                                    <LucideCircleX />
+                                  </Button>
+                                </div>
+                                <div className="grid items-start gap-4">
+                                  <div className="grid gap-2">
+                                    <Label htmlFor="title">Title</Label>
+                                    <Input
+                                      type="text"
+                                      id="title"
+                                      defaultValue={episode.title}
+                                      onChange={(e) => {
+                                        handleMetadaChange(e, idx, "title");
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="grid gap-2">
+                                    <Label htmlFor="description">
+                                      Description
+                                    </Label>
+                                    <Textarea
+                                      id="description"
+                                      defaultValue={episode.description}
+                                      placeholder="Episode description"
+                                      onChange={(e) => {
+                                        handleMetadaChange(
+                                          e,
+                                          idx,
+                                          "description"
+                                        );
+                                      }}
+                                      required
+                                    />
+                                  </div>
+                                  <div className="place-self-end">
+                                    <Button
+                                      type="button"
+                                      variant="secondary"
+                                      onClick={closeForm}
+                                    >
+                                      {" "}
+                                      Finished Editing Metadata
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
                       } else {
-                      return (
-                        <TableRow key={idx}>
-                          <TableCell className="font-medium w-[50px]">
-                            {idx + 1}
-                          </TableCell>
-                          <TableCell className="w-[50px] p-0 font-medium">
-                            {isPlaying && currentPlayingIndex === idx ? (
-                              <Button variant="ghost" onClick={handlePause}>
-                                <PauseCircle
-                                  fill="#ec48d1"
-                                  stroke="#f0f7ff"
-                                  className="h-10 w-10"
-                                  strokeWidth={1}
-                                />
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                onClick={() => {
-                                  // setIsPlaying(true);
-                                  handlePlay(
-                                    URL.createObjectURL(episode.episodeBlob),
-                                    idx
-                                  );
-                                }}
-                              >
-                                <PlayCircle
-                                  fill="#ec48d1"
-                                  stroke="#f0f7ff"
-                                  className="h-10 w-10"
-                                  strokeWidth={1}
-                                />
-                              </Button>
-                            )}
-                          </TableCell>
-                          <TableCell>{episode.episodeBlob.name}</TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              <span className="text-muted-foreground">
-                                Duration:{" "}
-                              </span>
-                              {episode.duration
-                                ? formatDuration(episode.duration)
-                                : "--:--"}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">No:</TableCell>
-                          <TableCell className="text-right">
-                            
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  aria-haspopup="true"
-                                  size="icon"
-                                  variant="ghost"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Toggle menu</span>
+                        return (
+                          <TableRow key={idx}>
+                            <TableCell className="font-medium w-[50px]">
+                              {idx + 1}
+                            </TableCell>
+                            <TableCell className="w-[50px] p-0 font-medium">
+                              {isPlaying && currentPlayingIndex === idx ? (
+                                <Button variant="ghost" onClick={handlePause}>
+                                  <PauseCircle
+                                    fill="#ec48d1"
+                                    stroke="#f0f7ff"
+                                    className="h-10 w-10"
+                                    strokeWidth={1}
+                                  />
                                 </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => handleEdit(idx)}>
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>Delete</DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    }
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  onClick={() => {
+                                    // setIsPlaying(true);
+                                    handlePlay(
+                                      URL.createObjectURL(episode.audio),
+                                      idx
+                                    );
+                                  }}
+                                >
+                                  <PlayCircle
+                                    fill="#ec48d1"
+                                    stroke="#f0f7ff"
+                                    className="h-10 w-10"
+                                    strokeWidth={1}
+                                  />
+                                </Button>
+                              )}
+                            </TableCell>
+                            <TableCell>{episode.title}</TableCell>
+                            <TableCell colSpan={2}>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex items-start gap-2">
+                                      <dt className="text-muted-foreground">
+                                        Duration:{" "}
+                                      </dt>
+                                      <dd>
+                                        {episode.duration
+                                          ? formatDuration(episode.duration)
+                                          : "--:--"}
+                                      </dd>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <dl>
+                                      <div className="flex justify-start gap-2">
+                                        <dt className="text-muted-foreground">
+                                          Audio:{" "}
+                                        </dt>
+                                        <dd>{episode.audio.name}</dd>
+                                      </div>
+                                      <div className="flex justify-start gap-2">
+                                        <dt className="text-muted-foreground">
+                                          Description:{" "}
+                                        </dt>
+                                        <dd>{episode.description}</dd>
+                                      </div>
+                                    </dl>
+                                    <TooltipArrow className="fill-popover" />
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </TableCell>
+
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    aria-haspopup="true"
+                                    size="icon"
+                                    variant="ghost"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Toggle menu</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuItem
+                                    onClick={() => handleEdit(idx)}
+                                  >
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>Delete</DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      }
                     })}
                   </TableBody>
                   <TableFooter>
