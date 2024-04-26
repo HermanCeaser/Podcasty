@@ -162,7 +162,7 @@ const EpisodeForm = ({ episodes, updateFields, onDrop }: EpisodeFormProps) => {
             className=" focus:border-red-400 max-w-md p-6 mb-4 bg-primary-100 border-dashed border-2 border-primary/400 rounded-lg items-center mx-auto text-center cursor-pointer"
           >
             <Input
-              name="episodes[]"
+              name="episodes"
               id="episodes"
               type="file"
               className="hidden"

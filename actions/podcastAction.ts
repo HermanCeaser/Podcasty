@@ -3,6 +3,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import os, { tmpdir } from "node:os";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 import { v2 as cloudinary } from "cloudinary";
 import { revalidatePath } from "next/cache";
@@ -12,6 +13,10 @@ cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.CLOUD_API_KEY,
   api_secret: process.env.CLOUD_API_SECRET,
+});
+
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION,
 });
 
 /**
@@ -39,11 +44,56 @@ cloudinary.config({
  *  api_key: '466216358877983'
  *}
  */
-const uploadToCloud = async (filepath: string) => {
+async function uploadToCloud(filepath: string) {
   const result = await cloudinary.uploader.upload(filepath, {
     folder: "podcaster_uploads",
   });
   return result;
+}
+
+const uploadFilesToS3 = async (files: FileList) => {
+  const uploadPromises = [];
+  const uploadedUrls = [];
+  const startTime = new Date();
+
+  try {
+    for (let file of files) {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      console.log({ buffer, file });
+      const ext = file.name.split(".").pop();
+      const name = crypto.randomUUID();
+      const encodedFileName = encodeURIComponent(name);
+      const params = {
+        Bucket: process.env.AWS_BUCKET_NAME,
+        Key: `episodes/${name}.${ext}`,
+        Body: buffer,
+        ContentType: file.type,
+      };
+
+      const command = new PutObjectCommand(params);
+      const uploadPromise = s3Client.send(command).then((data) => {
+        if (data.$metadata.httpStatusCode == 200) {
+          const url = `https://${process.env.AWS_BUCKET_NAME}.s3.amazonaws.com/episodes/${encodedFileName}.${ext}`;
+          uploadedUrls.push({ original_filename: file.name, url: url, etag: data.ETag });
+        }
+      });
+
+      uploadPromises.push(uploadPromise);
+    }
+
+    // Wait for all uploads to complete
+    await Promise.all(uploadPromises);
+
+    const endTime = new Date();
+    const totalTimeInSeconds = (endTime - startTime) / 1000;
+    console.log(
+      `Uploaded ${files.length} files in ${totalTimeInSeconds} seconds`
+    );
+
+    return uploadedUrls;
+  } catch (error) {
+    console.log(error);
+  }
 };
 
 const saveToLocal = async (formData: FormData) => {
@@ -125,35 +175,44 @@ const saveToDB = async (formData: FormData, artwork: any) => {
 };
 
 const delay = (delayInMs: number) => {
-  return new Promise((resolve) => { setTimeout(resolve, delayInMs) });
-}
+  return new Promise((resolve) => {
+    setTimeout(resolve, delayInMs);
+  });
+};
 
 // Create a server action to save podcast to db (Mongo DB) receiving form data as an argument
 export const savePodcast = async (formData: FormData) => {
   try {
+    console.log("Saving to DB");
+    console.log(formData);
+    const episodes = formData.getAll("episodes");
+
+    const uploadedUrls = await uploadFilesToS3(episodes);
+    // console.log(uploadedUrls);
+
+    // console.log(episode);
     // Upload to tmp dir
-    const filepath = await saveToLocal(formData);
+    // const filepath = await saveToLocal(formData);
 
-    // then upload to cloudinary
-    uploadToCloud(filepath.filepath).then((artwork) => {
-      // then save to db
-      saveToDB(formData, artwork)
-        .then(() => {
-          console.log("Podcast saved to DB!");
-        })
-        .catch((error) => {
-          console.error(error);
-        });
-    });
+    // // then upload to cloudinary
+    // uploadToCloud(filepath.filepath).then((artwork) => {
+    //   // then save to db
+    //   saveToDB(formData, artwork)
+    //     .then(() => {
+    //       console.log("Podcast saved to DB!");
+    //     })
+    //     .catch((error) => {
+    //       console.error(error);
+    //     });
+    // });
 
-    // delay for 2 seconds and delete from tmpdir
-    // await delay(2000);
-    console.log("Deleting from tmp dir");
-    // delete from tmp dir
-    await fs.unlink(filepath.filepath);
+    // // delay for 2 seconds and delete from tmpdir
+    // // await delay(2000);
+    // console.log("Deleting from tmp dir");
+    // // delete from tmp dir
+    // await fs.unlink(filepath.filepath);
 
-    revalidatePath("/");
-
+    // revalidatePath("/");
   } catch (error: any) {
     console.error(error);
     return {
@@ -173,5 +232,3 @@ export const deleteImgFromCloud = async (publicId: string) => {
     };
   }
 };
-
-

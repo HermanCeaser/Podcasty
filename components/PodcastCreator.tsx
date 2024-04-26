@@ -164,9 +164,21 @@ function PodcastCreator() {
 
     if (!isLastStep) return next();
 
-    return;
+    const fData = new FormData();
+    fData.append("title", data.title);
+    fData.append("artwork", data.artwork!);
+    fData.append("description", data.description!);
+    fData.append("category", data.category);
 
-    const res = await savePodcast(formData);
+    data.episodes.forEach((episode) => {
+      fData.append("episodes", episode.audio);
+    });
+    
+    fData.append("episode_metadata", JSON.stringify(data.episodes));
+
+    // return;
+
+    const res = await savePodcast(fData);
     // if (res?.error) {
     //   toast({
     //     title: "Error",
